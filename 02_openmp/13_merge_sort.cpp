@@ -1,12 +1,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
+#include <omp.h>
 
 void merge(std::vector<int>& vec, int begin, int mid, int end) {
   std::vector<int> tmp(end-begin+1);
   int left = begin;
   int right = mid+1;
-  for (int i=0; i<tmp.size(); i++) { 
+#pragma omp for
+  for (int i=0; i<tmp.size(); i++) {
     if (left > mid)
       tmp[i] = vec[right++];
     else if (right > end)
@@ -16,6 +18,7 @@ void merge(std::vector<int>& vec, int begin, int mid, int end) {
     else
       tmp[i] = vec[right++]; 
   }
+#pragma omp for
   for (int i=0; i<tmp.size(); i++) 
     vec[begin++] = tmp[i];
 }
@@ -30,14 +33,17 @@ void merge_sort(std::vector<int>& vec, int begin, int end) {
 }
 
 int main() {
-  int n = 20;
+  omp_set_num_threads(4);
+  int n = 100;
   std::vector<int> vec(n);
+#pragma omp parallel for
   for (int i=0; i<n; i++) {
     vec[i] = rand() % (10 * n);
     printf("%d ",vec[i]);
   }
   printf("\n");
   merge_sort(vec, 0, n-1);
+#pragma omp for
   for (int i=0; i<n; i++) {
     printf("%d ",vec[i]);
   }
