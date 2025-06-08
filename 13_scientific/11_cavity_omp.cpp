@@ -3,8 +3,9 @@
 #include <fstream>
 #include <vector>
 #include <cmath>
-#include <chrono>
+#include <omp.h>
 #include <iostream>
+#include <chrono>
 
 using namespace std;
 typedef vector<vector<float>> matrix;
@@ -20,6 +21,8 @@ int main() {
   double rho = 1.;
   double nu = .02;
 
+  omp_set_num_threads(16);
+
   matrix u(ny,vector<float>(nx));
   matrix v(ny,vector<float>(nx));
   matrix p(ny,vector<float>(nx));
@@ -32,6 +35,7 @@ int main() {
   start = std::chrono::system_clock::now();
 
   for (int j=0; j<ny; j++) {
+    //#pragma omp parallel for
     for (int i=0; i<nx; i++) {
       u[j][i] = 0;
       v[j][i] = 0;
@@ -44,6 +48,7 @@ int main() {
   ofstream pfile("p.dat");
   for (int n=0; n<nt; n++) {
     for (int j=1; j<ny-1; j++) {
+      #pragma omp parallel for
       for (int i=1; i<nx-1; i++) {
         // Compute b[j][i]
         b[j][i] = rho * (1 / dt *\
@@ -54,9 +59,12 @@ int main() {
       }
     }
     for (int it=0; it<nit; it++) {
-      for (int j=0; j<ny; j++)
-        for (int i=0; i<nx; i++)
-	  pn[j][i] = p[j][i];
+      for (int j=0; j<ny; j++) {
+        for (int i=0; i<nx; i++) {
+	        pn[j][i] = p[j][i];
+        }
+      }
+    #pragma omp parallel for
       for (int j=1; j<ny-1; j++) {
         for (int i=1; i<nx-1; i++) {
 	  // Compute p[j][i]
@@ -66,24 +74,28 @@ b[j][i] * dx*dx * dy*dy) \
 / (2 * (dx*dx + dy*dy));
 	}
       }
+      //#pragma omp parallel for
       for (int j=0; j<ny; j++) {
         // Compute p[j][0] and p[j][nx-1]
         p[j][0] = p[j][1];
         p[j][nx-1] = p[j][nx-2];
       }
+      //#pragma omp parallel for
       for (int i=0; i<nx; i++) {
 	// Compute p[0][i] and p[ny-1][i]
   p[0][i] = p[1][i];
   p[ny-1][i] = 0;
       }
     }
+    #pragma omp parallel for
     for (int j=0; j<ny; j++) {
       for (int i=0; i<nx; i++) {
         un[j][i] = u[j][i];
-	vn[j][i] = v[j][i];
+	      vn[j][i] = v[j][i];
       }
     }
     for (int j=1; j<ny-1; j++) {
+      #pragma omp parallel for
       for (int i=1; i<nx-1; i++) {
 	// Compute u[j][i] and v[j][i]
   u[j][i] = un[j][i] - un[j][i] * (dt / dx) * (un[j][i] - un[j][i-1])\
@@ -96,14 +108,17 @@ b[j][i] * dx*dx * dy*dy) \
   - dt / (2 * rho * dx) * (p[j+1][i] - p[j-1][i])\
   + nu * dt / (dx*dx) * (vn[j][i+1] - 2 * vn[j][i] + vn[j][i-1])\
   + nu * dt / (dy*dy) * (vn[j+1][i] - 2 * vn[j][i] + vn[j-1][i]);
+
       }
     }
+    //#pragma omp parallel for
     for (int j=0; j<ny; j++) {
       // Compute u[j][0], u[j][nx-1], v[j][0], v[j][nx-1]
       u[j][0] = 0;
       u[j][nx-1] = 0;
       v[j][nx-1] = 0;
     }
+    //#pragma omp parallel for
     for (int i=0; i<nx; i++) {
       // Compute u[0][i], u[ny-1][i], v[0][i], v[ny-1][i]
       u[0][i] = 0;
