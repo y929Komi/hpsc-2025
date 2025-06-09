@@ -101,6 +101,7 @@ b[j][i] * dx*dx * dy*dy) \
     for (int j=0; j<ny; j++) {
       // Compute u[j][0], u[j][nx-1], v[j][0], v[j][nx-1]
       u[j][0] = 0;
+      v[j][0] = 0;
       u[j][nx-1] = 0;
       v[j][nx-1] = 0;
     }
